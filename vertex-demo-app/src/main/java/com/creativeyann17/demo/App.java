@@ -24,7 +24,7 @@ public class App extends AbstractVerticle {
   private static final Logger log = LoggerFactory.getLogger(App.class);
 
   public static void main(String[]args) {
-    log.info("App starting...");
+    log.info("App is starting ... CPUs: " + Runtime.getRuntime().availableProcessors());
 
     var mgr = new InfinispanClusterManager();
 
@@ -33,6 +33,7 @@ public class App extends AbstractVerticle {
 
     Vertx.clusteredVertx(options)
       .onSuccess(vertx -> {
+        //Vertx vertx = Vertx.vertx(new VertxOptions());
         vertx.deployVerticle(new WebVerticle());
         vertx.deployVerticle(new RequestHandler(), new DeploymentOptions().setThreadingModel(ThreadingModel.VIRTUAL_THREAD));
       }).onFailure(failure -> {
