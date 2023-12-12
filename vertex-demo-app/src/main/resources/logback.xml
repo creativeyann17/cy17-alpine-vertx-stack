@@ -27,6 +27,7 @@
     </appender>
 
     <logger name="com.creativeyann17" level="INFO"/>
+    <logger name="io.vertx.ext.cluster.infinispan.InfinispanClusterManager" level="INFO"/>"
 
     <root level="info">
         <appender-ref ref="STDOUT" />
