@@ -1,0 +1,50 @@
+version: '3'
+
+x-common:
+  app:
+    &common-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: ${PORT}
+      ENV: ${ENV}
+      JAVA_OPTS: -XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XshowSettings:vm -XX:+PrintCommandLineFlags -XX:+TieredCompilation
+    mem_limit: 256m
+    cpus: 0.5
+    depends_on:
+      - nginx
+    healthcheck:
+      &common-healthcheck
+      test: curl -Is localhost:${PORT} | head -n 1 | grep 200 || exit 1
+      interval: 10s
+      timeout: 15s
+      retries: 5
+    restart: always
+
+services:
+  nginx:
+    image: nginx:stable
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      DOMAIN: ${DOMAIN}
+      APP_PORT: ${PORT}
+      LIMIT_RATE_REQ_SEC: ${LIMIT_RATE_REQ_SEC}
+      LIMIT_RATE_BURST: ${LIMIT_RATE_BURST}
+    mem_limit: 128m
+    cpus: 1
+    volumes:
+      - ./nginx:/etc/nginx/templates
+      - /var/log/nginx:/var/log/nginx
+      - ${CERTS_PATH}:/certs:ro
+    healthcheck:
+      <<: *common-healthcheck
+      test: curl -Is localhost:80 | head -n 1 | grep 200 || exit 1
+    restart: always
+
+  app-1:
+    <<: *common-app
+  app-2:
+    <<: *common-app
