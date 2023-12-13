@@ -11,7 +11,7 @@ public class HelloConsumer extends AbstractVerticle {
   public static final String HELLO_EVENT = "HELLO_EVENT";
 
   @Override
-  public void start(Promise<Void> startPromise) throws Exception {
+  public void start(Promise<Void> startPromise) {
     var consumer = vertx.eventBus().consumer(HELLO_EVENT, message -> {
       log.info(String.format("[%s] %s", Configuration.UUID, message.body()));
       message.reply("Hello World !!!");
@@ -19,7 +19,7 @@ public class HelloConsumer extends AbstractVerticle {
     if (consumer.isRegistered()) {
       startPromise.complete();
     } else {
-      startPromise.fail("Cant create consumer HELLO");
+      startPromise.fail("Cant create consumer " + HELLO_EVENT);
     }
   }
 }

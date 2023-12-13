@@ -1,13 +1,15 @@
 package com.creativeyann17.demo.verticles;
 
 import com.creativeyann17.demo.Configuration;
-import com.creativeyann17.demo.handlers.*;
+import com.creativeyann17.demo.handlers.HealthHandler;
+import com.creativeyann17.demo.handlers.TemplateHandler;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Context;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -32,26 +34,23 @@ public class WebServer extends AbstractVerticle {
 
   //private static final Logger log = LoggerFactory.getLogger(WebVerticle.class);
 
-  private final String APPLICATION_JSON = HttpHeaderValues.APPLICATION_JSON.toString();
+  private static final String APPLICATION_JSON = HttpHeaderValues.APPLICATION_JSON.toString();
+  private static final String PUBLIC_PATH = "public";
 
-  private GlobalFailureHandler globalFailureHandler;
   private StaticHandler staticHandler;
   private TemplateEngine templateEngine;
   private TemplateHandler templateHandler;
-  private HealthHandler healthHandler;
-  private RedirectHandler redirectHandler;
   private FaviconHandler faviconHandler;
+  private HealthHandler healthHandler;
 
   @Override
   public void init(Vertx vertx, Context context) {
     super.init(vertx, context);
-    this.globalFailureHandler = new GlobalFailureHandler();
-    this.staticHandler = StaticHandler.create("public/static");
-    this.healthHandler = new HealthHandler();
+    this.staticHandler = StaticHandler.create(PUBLIC_PATH + "/static");
     this.templateEngine = PebbleTemplateEngine.create(vertx, "html");
-    this.templateHandler = new TemplateHandler(vertx, templateEngine, "public/templates");
-    this.redirectHandler = new RedirectHandler();
-    this.faviconHandler = FaviconHandler.create(vertx, "public/static/images/favicon.ico");
+    this.templateHandler = new TemplateHandler(templateEngine, PUBLIC_PATH + "/templates");
+    this.faviconHandler = FaviconHandler.create(vertx, PUBLIC_PATH + "/static/images/favicon.ico");
+    this.healthHandler = new HealthHandler();
   }
 
   @Override
@@ -77,13 +76,13 @@ public class WebServer extends AbstractVerticle {
 
   private Router createRouter() {
     var router = Router.router(vertx);
-    router.route().failureHandler(globalFailureHandler);
+    router.route().failureHandler(this::handleGlobalFailure);
     router.route().handler(faviconHandler);
     router.route("/").handler(this::handleIndex);
     router.route("/public/static/*").handler(staticHandler);
     router.route("/actuator/*").subRouter(createActuators());
     router.route("/api/v1/*").subRouter(createAPIv1());
-    router.route().handler(redirectHandler);
+    router.route().handler(this::handleRedirectToIndex);
     return router;
   }
 
@@ -111,6 +110,20 @@ public class WebServer extends AbstractVerticle {
     return router;
   }
 
+  private void handleGlobalFailure(RoutingContext routingContext) {
+    var exception = routingContext.failure();
+    log.error("", exception);
+    routingContext.response().setStatusCode(500).end("");
+  }
+
+  private void handleRedirectToIndex(RoutingContext rc) {
+    log.warn("Redirect: {} from: {}", rc.request().remoteAddress(), rc.request().absoluteURI());
+    HttpServerResponse response = rc.response();
+    response.setStatusCode(303);
+    response.headers().add("Location", "/");
+    response.end();
+  }
+
   private void handleIndex(RoutingContext routingContext) {
     final JsonObject context = new JsonObject()
       .put("value", "foo");
@@ -122,9 +135,7 @@ public class WebServer extends AbstractVerticle {
       routingContext.response()
         .putHeader(CONTENT_TYPE, TEXT_PLAIN)
         .end(String.valueOf(handler.body()));
-    }).onFailure(failure -> {
-      throw new RuntimeException(failure);
-    });
+    }).onFailure(routingContext::fail);
   }
 
 }

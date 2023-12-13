@@ -1,7 +1,6 @@
 package com.creativeyann17.demo.handlers;
 
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.common.template.TemplateEngine;
@@ -11,7 +10,7 @@ public class TemplateHandler implements Handler<RoutingContext> {
   private final TemplateEngine templateEngine;
   private final String root;
 
-  public TemplateHandler(Vertx vertx, TemplateEngine templateEngine, String root) {
+  public TemplateHandler(TemplateEngine templateEngine, String root) {
     this.templateEngine = templateEngine;
     this.root = root;
   }

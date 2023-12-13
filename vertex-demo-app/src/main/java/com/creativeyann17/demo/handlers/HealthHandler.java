@@ -10,7 +10,7 @@ public class HealthHandler implements Handler<RoutingContext> {
 
   @Override
   public void handle(RoutingContext rc) {
-    rc.response().end(Json.encodePrettily(STATUS_OK));
+    rc.response().end(Json.encode(STATUS_OK));
   }
 
   private record Status(String status) {

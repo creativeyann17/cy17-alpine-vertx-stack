@@ -26,7 +26,7 @@ create_lograte_nginx()
 {
     if [ ! -f /etc/logrotate.d/nginx ]
     then
-        sudo sh -c "echo '/var/log/nginx/*.log {\n\tdaily\n\trotate 10\n\tmissingok\n\tcopytruncate\n\tmaxsize 10M\n\tsize 100M\n\tcompress\n\tdelaycompress\n}' > /etc/logrotate.d/nginx"
+        sudo sh -c "echo '/var/log/nginx/*.log {\n\tdaily\n\trotate 7\n\tmissingok\n\tnotifempty\n\tdelaycompress\n\tcompress\n\tsize 100M\n}' > /etc/logrotate.d/nginx"
         sudo logrotate --force /etc/logrotate.d/nginx
     fi
 }
