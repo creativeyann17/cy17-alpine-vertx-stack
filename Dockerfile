@@ -16,6 +16,7 @@ RUN jlink \
          --output slim
 
 FROM alpine:latest
+RUN apk add --no-cache curl
 WORKDIR /app
 ENV JAVA_HOME=/jre
 ENV PATH="$PATH:$JAVA_HOME/bin"

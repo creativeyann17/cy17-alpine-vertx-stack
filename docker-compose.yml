@@ -43,7 +43,7 @@ services:
       - ${CERTS_PATH}:/certs:ro
     healthcheck:
       <<: *common-healthcheck
-      test: curl -Is localhost:80 | head -n 1 | grep 200 || exit 1
+      test: service nginx status || exit 1
     restart: always
 
   app-1:
