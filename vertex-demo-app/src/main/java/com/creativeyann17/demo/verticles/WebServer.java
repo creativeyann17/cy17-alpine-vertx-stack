@@ -8,6 +8,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.common.template.TemplateEngine;
@@ -38,7 +39,6 @@ public class WebServer extends AbstractVerticle {
   private TemplateEngine templateEngine;
   private TemplateHandler templateHandler;
   private HealthHandler healthHandler;
-  private IndexHandler indexHandler;
   private RedirectHandler redirectHandler;
   private FaviconHandler faviconHandler;
 
@@ -50,7 +50,6 @@ public class WebServer extends AbstractVerticle {
     this.healthHandler = new HealthHandler();
     this.templateEngine = PebbleTemplateEngine.create(vertx, "html");
     this.templateHandler = new TemplateHandler(vertx, templateEngine, "public/templates");
-    this.indexHandler = new IndexHandler(templateHandler);
     this.redirectHandler = new RedirectHandler();
     this.faviconHandler = FaviconHandler.create(vertx, "public/static/images/favicon.ico");
   }
@@ -73,6 +72,7 @@ public class WebServer extends AbstractVerticle {
   private HttpServerOptions createOptions() {
     return new HttpServerOptions()
       .setCompressionSupported(true)
+      .setCompressionLevel(HttpServerOptions.DEFAULT_COMPRESSION_LEVEL)
       .setPort(Configuration.port());
   }
 
@@ -80,9 +80,9 @@ public class WebServer extends AbstractVerticle {
     var router = Router.router(vertx);
     router.route().failureHandler(globalFailureHandler);
     router.route().handler(faviconHandler);
-    router.route("/").handler(indexHandler);
+    router.route("/").handler(this::handleIndex);
     router.route("/public/static/*").handler(staticHandler);
-    router.route("/actuators/*").subRouter(createActuators());
+    router.route("/actuator/*").subRouter(createActuators());
     router.route("/api/v1/*").subRouter(createAPIv1());
     router.route().handler(redirectHandler);
     return router;
@@ -110,6 +110,12 @@ public class WebServer extends AbstractVerticle {
     });
     router.route("/hello").handler(this::handleHello);
     return router;
+  }
+
+  private void handleIndex(RoutingContext routingContext) {
+    final JsonObject context = new JsonObject()
+      .put("value", "foo");
+    templateHandler.handle(routingContext, "index.html", context);
   }
 
   private void handleHello(RoutingContext routingContext) {
