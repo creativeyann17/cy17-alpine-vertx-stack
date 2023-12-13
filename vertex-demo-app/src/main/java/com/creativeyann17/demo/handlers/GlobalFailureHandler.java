@@ -1,18 +1,16 @@
-package com.creativeyann17.demo;
+package com.creativeyann17.demo.handlers;
 
 import io.vertx.core.Handler;
-import io.vertx.core.impl.logging.Logger;
-import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class GlobalFailureHandler implements Handler<RoutingContext> {
-
-  private static final Logger log = LoggerFactory.getLogger(GlobalFailureHandler.class);
 
   @Override
   public void handle(RoutingContext routingContext) {
     var exception = routingContext.failure();
-    log.error(exception, exception);
+    log.error("", exception);
     routingContext.response().setStatusCode(500).end("");
   }
 }

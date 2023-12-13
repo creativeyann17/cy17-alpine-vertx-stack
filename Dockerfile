@@ -21,6 +21,7 @@ ENV JAVA_HOME=/jre
 ENV PATH="$PATH:$JAVA_HOME/bin"
 COPY --from=build-jre /tmp/jre/slim $JAVA_HOME
 COPY --from=build-app /tmp/app/target/app-1.0.0-SNAPSHOT-fat.jar app.jar
+COPY vertex-demo-app/public ./public
 ENTRYPOINT java $JAVA_OPTS -jar app.jar
 
 #FROM amazoncorretto:21-alpine
