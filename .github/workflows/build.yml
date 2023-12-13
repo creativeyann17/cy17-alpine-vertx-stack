@@ -15,4 +15,5 @@ jobs:
           distribution: 'oracle'
           cache: maven
       - name: Build with Maven
+        working-directory: vertex-demo-app
         run: mvn --batch-mode --update-snapshots verify
