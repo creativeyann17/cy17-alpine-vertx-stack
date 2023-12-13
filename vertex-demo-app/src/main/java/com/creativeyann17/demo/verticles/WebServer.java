@@ -71,8 +71,7 @@ public class WebServer extends AbstractVerticle {
 
   private HttpServerOptions createOptions() {
     return new HttpServerOptions()
-      .setCompressionSupported(true)
-      .setCompressionLevel(HttpServerOptions.DEFAULT_COMPRESSION_LEVEL)
+      .setCompressionSupported(false)
       .setPort(Configuration.port());
   }
 
