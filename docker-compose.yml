@@ -10,7 +10,7 @@ x-common:
       PORT: ${PORT}
       ENV: ${ENV}
       JAVA_OPTS: -XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XshowSettings:vm -XX:+PrintCommandLineFlags -XX:+TieredCompilation
-    mem_limit: 256m
+    mem_limit: 512m
     cpus: 0.5
     depends_on:
       - nginx

@@ -35,4 +35,4 @@ generate_dev_certs
 prepare_env_file
 create_lograte_nginx
 
-docker-compose down && docker-compose up --build
+docker-compose down --rmi all && docker-compose up --build
