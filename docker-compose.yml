@@ -12,6 +12,8 @@ x-common:
       JAVA_OPTS: -XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XshowSettings:vm -XX:+PrintCommandLineFlags -XX:+TieredCompilation
     mem_limit: 512m
     cpus: 0.5
+    volumes:
+      - /var/log/app:/app/logs
     depends_on:
       - nginx
     healthcheck:
@@ -48,3 +50,4 @@ services:
     <<: *common-app
   app-2:
     <<: *common-app
+    
