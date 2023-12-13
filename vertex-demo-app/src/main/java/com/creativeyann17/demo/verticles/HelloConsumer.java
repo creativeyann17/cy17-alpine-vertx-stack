@@ -14,7 +14,7 @@ public class HelloConsumer extends AbstractVerticle {
   public void start(Promise<Void> startPromise) throws Exception {
     var consumer = vertx.eventBus().consumer(HELLO_EVENT, message -> {
       log.info(String.format("[%s] %s", Configuration.UUID, message.body()));
-      message.reply("Hello World!");
+      message.reply("Hello World !!!");
     });
     if (consumer.isRegistered()) {
       startPromise.complete();
