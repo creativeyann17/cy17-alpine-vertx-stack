@@ -18,7 +18,7 @@ x-common:
       - nginx
     healthcheck:
       &common-healthcheck
-      test: curl -Is localhost:${PORT} | head -n 1 | grep 200 || exit 1
+      test: curl -Is localhost:${PORT}/actuator/health | head -n 1 | grep 200 || exit 1
       interval: 10s
       timeout: 15s
       retries: 5

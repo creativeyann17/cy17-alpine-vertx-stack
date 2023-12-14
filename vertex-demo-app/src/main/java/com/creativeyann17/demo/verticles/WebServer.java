@@ -1,7 +1,7 @@
 package com.creativeyann17.demo.verticles;
 
+import com.creativeyann17.demo.App;
 import com.creativeyann17.demo.Configuration;
-import com.creativeyann17.demo.handlers.HealthHandler;
 import com.creativeyann17.demo.handlers.TemplateHandler;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.AbstractVerticle;
@@ -11,6 +11,9 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.HealthChecks;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.common.template.TemplateEngine;
@@ -41,7 +44,8 @@ public class WebServer extends AbstractVerticle {
   private TemplateEngine templateEngine;
   private TemplateHandler templateHandler;
   private FaviconHandler faviconHandler;
-  private HealthHandler healthHandler;
+  private HealthCheckHandler healthHandler;
+  private HealthChecks healthChecks;
 
   @Override
   public void init(Vertx vertx, Context context) {
@@ -50,7 +54,8 @@ public class WebServer extends AbstractVerticle {
     this.templateEngine = PebbleTemplateEngine.create(vertx, "html");
     this.templateHandler = new TemplateHandler(templateEngine, PUBLIC_PATH + "/templates");
     this.faviconHandler = FaviconHandler.create(vertx, PUBLIC_PATH + "/static/images/favicon.ico");
-    this.healthHandler = new HealthHandler();
+    this.healthChecks = App.getSingleton(HealthChecks.class);
+    this.healthHandler = HealthCheckHandler.createWithHealthChecks(healthChecks);
   }
 
   @Override
@@ -61,8 +66,10 @@ public class WebServer extends AbstractVerticle {
       .listen(result -> {
         if (result.succeeded()) {
           startPromise.complete();
+          healthChecks.register("web", promise -> promise.complete(Status.OK()));
           log.info("HTTP server started on port: " + Configuration.port());
         } else {
+          healthChecks.register("web", promise -> promise.complete(Status.KO()));
           startPromise.fail(result.cause());
         }
       });
@@ -82,7 +89,7 @@ public class WebServer extends AbstractVerticle {
     router.route("/public/static/*").handler(staticHandler);
     router.route("/actuator/*").subRouter(createActuators());
     router.route("/api/v1/*").subRouter(createAPIv1());
-    router.route().handler(this::handleRedirectToIndex);
+    //router.route().handler(this::handleRedirectToIndex);
     return router;
   }
 

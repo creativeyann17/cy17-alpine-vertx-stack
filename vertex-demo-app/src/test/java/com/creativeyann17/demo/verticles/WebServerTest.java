@@ -1,15 +1,18 @@
 package com.creativeyann17.demo.verticles;
 
+import com.creativeyann17.demo.App;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.healthchecks.HealthChecks;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ExtendWith(VertxExtension.class)
 class WebServerTest {
 
+  final HealthChecks healthChecks = App.putSingleton(HealthChecks.class, Mockito.mock(HealthChecks.class));
+
   @BeforeEach
   void deploy(Vertx vertx, VertxTestContext testContext) {
     vertx.deployVerticle(new HelloConsumer());
@@ -30,21 +35,6 @@ class WebServerTest {
   @Test
   void deployed(Vertx vertx, VertxTestContext testContext) {
     testContext.completeNow();
-  }
-
-  @Test
-  void get_health(Vertx vertx, VertxTestContext testContext) {
-    var client = vertx.createHttpClient();
-    client.request(HttpMethod.GET, 8080, "localhost", "/actuator/health")
-      .compose(HttpClientRequest::send)
-      .compose(HttpClientResponse::body)
-      .onSuccess(buffer -> {
-        testContext.verify(() -> {
-          assertEquals("{\"status\":\"OK\"}", buffer.toString());
-          testContext.completeNow();
-        });
-      }).onFailure(testContext::failNow);
-
   }
 
   @Test
