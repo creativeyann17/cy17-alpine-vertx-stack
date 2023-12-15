@@ -24,6 +24,8 @@ import io.vertx.micrometer.backends.BackendRegistries;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Optional;
+
 import static com.creativeyann17.demo.verticles.HelloConsumer.HELLO_EVENT;
 import static io.netty.handler.codec.http.HttpHeaderValues.TEXT_PLAIN;
 import static io.vertx.core.http.HttpHeaders.AUTHORIZATION;
@@ -181,7 +183,7 @@ public class WebServer extends AbstractVerticle {
   }
 
   private void handleRedirectToIndex(RoutingContext rc) {
-    log.warn("Redirect: {} => {}", rc.request().remoteAddress(), rc.request().absoluteURI());
+    log.warn("Redirect: {} => {}", getRemoteAddr(rc), rc.request().absoluteURI());
     HttpServerResponse response = rc.response();
     response.setStatusCode(303);
     response.headers().add("Location", "/");
@@ -189,7 +191,8 @@ public class WebServer extends AbstractVerticle {
   }
 
   private void handleNotFound(RoutingContext rc) {
-    log.warn("Not found: {} => {}", rc.request().remoteAddress(), rc.request().absoluteURI());
+    log.warn("Not found: {} => {}", getRemoteAddr(rc), rc.request().absoluteURI());
+    log.warn("Details:\n{}\n{}", rc.request().headers(), rc.request().body().result());
     rc.response().setStatusCode(404).end();
   }
 
@@ -207,6 +210,10 @@ public class WebServer extends AbstractVerticle {
         .putHeader(CONTENT_TYPE, TEXT_PLAIN)
         .end(String.valueOf(handler.body()));
     }).onFailure(routingContext::fail);
+  }
+
+  private String getRemoteAddr(RoutingContext routingContext) {
+    return Optional.ofNullable(routingContext.request().getHeader("X-Real-IP")).orElse(routingContext.request().remoteAddress().toString());
   }
 
 }
