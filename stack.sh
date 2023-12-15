@@ -89,6 +89,7 @@ prod()
 rolling()
 {
   start "--no-deps --wait -d app-1"
+  sleep 5 # nginx fail_timeout
   start "--no-deps --wait -d app-2"
 }
 
