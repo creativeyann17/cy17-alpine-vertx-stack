@@ -9,7 +9,7 @@ x-common:
     environment:
       PORT: ${PORT}
       ENV: ${ENV}
-      X-API-KEY: ${X-API-KEY}
+      X_API_KEY: ${X_API_KEY}
       JAVA_OPTS: -XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XshowSettings:vm -XX:+PrintCommandLineFlags -XX:+TieredCompilation
     mem_limit: 512m
     cpus: 0.5

@@ -181,7 +181,7 @@ public class WebServer extends AbstractVerticle {
   }
 
   private void handleRedirectToIndex(RoutingContext rc) {
-    log.warn("Redirect: {} from: {}", rc.request().remoteAddress(), rc.request().absoluteURI());
+    log.warn("Redirect: {} => {}", rc.request().remoteAddress(), rc.request().absoluteURI());
     HttpServerResponse response = rc.response();
     response.setStatusCode(303);
     response.headers().add("Location", "/");
@@ -189,7 +189,7 @@ public class WebServer extends AbstractVerticle {
   }
 
   private void handleNotFound(RoutingContext rc) {
-    log.warn("Not found: {} from: {}", rc.request().remoteAddress(), rc.request().absoluteURI());
+    log.warn("Not found: {} => {}", rc.request().remoteAddress(), rc.request().absoluteURI());
     rc.response().setStatusCode(404).end();
   }
 

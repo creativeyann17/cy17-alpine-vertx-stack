@@ -15,7 +15,7 @@ public class Configuration {
 
   public static final Env ENV = Env.valueOf(getEnvOrDefault("ENV", "prod"));
   public static final int PORT = Integer.parseInt(getEnvOrDefault("PORT", "8080"));
-  public static final String X_API_KEY = getEnvOrDefault("X-API-KEY", UUID);
+  public static final String X_API_KEY = getEnvOrDefault("X_API_KEY", UUID);
 
   public static void init() {
     System.setProperty("vertxweb.environment", ENV.name());
