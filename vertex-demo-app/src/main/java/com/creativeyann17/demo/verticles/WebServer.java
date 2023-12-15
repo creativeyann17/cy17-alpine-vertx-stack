@@ -1,13 +1,11 @@
 package com.creativeyann17.demo.verticles;
 
-import com.creativeyann17.demo.App;
-import com.creativeyann17.demo.Configuration;
 import com.creativeyann17.demo.handlers.TemplateHandler;
+import com.creativeyann17.demo.utils.Configuration;
+import com.creativeyann17.demo.utils.SingletonsContext;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Context;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
+import io.vertx.core.*;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
@@ -21,10 +19,14 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.FaviconHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine;
+import io.vertx.micrometer.PrometheusScrapingHandler;
+import io.vertx.micrometer.backends.BackendRegistries;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import static com.creativeyann17.demo.verticles.HelloConsumer.HELLO_EVENT;
 import static io.netty.handler.codec.http.HttpHeaderValues.TEXT_PLAIN;
+import static io.vertx.core.http.HttpHeaders.AUTHORIZATION;
 import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
 
 @Slf4j
@@ -46,6 +48,8 @@ public class WebServer extends AbstractVerticle {
   private FaviconHandler faviconHandler;
   private HealthCheckHandler healthHandler;
   private HealthChecks healthChecks;
+  private Handler<RoutingContext> prometheusScrapingHandler;
+  //private Timer timerIndex;
 
   @Override
   public void init(Vertx vertx, Context context) {
@@ -54,8 +58,14 @@ public class WebServer extends AbstractVerticle {
     this.templateEngine = PebbleTemplateEngine.create(vertx, "html");
     this.templateHandler = new TemplateHandler(templateEngine, PUBLIC_PATH + "/templates");
     this.faviconHandler = FaviconHandler.create(vertx, PUBLIC_PATH + "/static/images/favicon.ico");
-    this.healthChecks = App.getSingleton(HealthChecks.class);
+    this.healthChecks = SingletonsContext.get(HealthChecks.class);
     this.healthHandler = HealthCheckHandler.createWithHealthChecks(healthChecks);
+    this.prometheusScrapingHandler = PrometheusScrapingHandler.create();
+
+    /*timerIndex = Timer
+      .builder("index timer")
+      .description("how much time takes index to compute")
+      .register(SingletonsContext.get(MeterRegistry.class));*/
   }
 
   @Override
@@ -67,7 +77,7 @@ public class WebServer extends AbstractVerticle {
         if (result.succeeded()) {
           startPromise.complete();
           healthChecks.register("web", promise -> promise.complete(Status.OK()));
-          log.info("HTTP server started on port: " + Configuration.port());
+          log.info("HTTP server started on port: " + Configuration.PORT);
         } else {
           healthChecks.register("web", promise -> promise.complete(Status.KO()));
           startPromise.fail(result.cause());
@@ -78,7 +88,7 @@ public class WebServer extends AbstractVerticle {
   private HttpServerOptions createOptions() {
     return new HttpServerOptions()
       .setCompressionSupported(false)
-      .setPort(Configuration.port());
+      .setPort(Configuration.PORT);
   }
 
   private Router createRouter() {
@@ -90,7 +100,52 @@ public class WebServer extends AbstractVerticle {
     router.route("/actuator/*").subRouter(createActuators());
     router.route("/api/v1/*").subRouter(createAPIv1());
     //router.route().handler(this::handleRedirectToIndex);
+    router.route().handler(this::handleNotFound);
     return router;
+  }
+
+  private void handleHealth(RoutingContext routingContext) {
+    handleAuth(routingContext, false, (auth) -> {
+      if (auth == null) {
+        routingContext.response().end(JsonObject.of("status", "UP").encodePrettily());
+      } else {
+        healthHandler.handle(routingContext);
+      }
+    });
+  }
+
+  private void handleStatus(RoutingContext routingContext) {
+    handleAuth(routingContext, true, (auth) -> {
+      MeterRegistry registry = BackendRegistries.getDefaultNow();
+      StringBuilder builder = new StringBuilder();
+      registry.forEachMeter(m -> {
+        builder.append(m.getId().getName() + " ");
+        m.measure().forEach(mes -> {
+          builder.append(mes.getValue() + " ");
+        });
+        builder.append("\n");
+      });
+      routingContext.response().end(builder.toString());
+    });
+  }
+
+  private void handleMetrics(RoutingContext routingContext) {
+    handleAuth(routingContext, true, (auth) -> {
+      prometheusScrapingHandler.handle(routingContext);
+    });
+  }
+
+  private void handleAuth(RoutingContext routingContext, boolean strict, Handler<String> handler) {
+    var auth = routingContext.request().getHeader(AUTHORIZATION);
+    if (StringUtils.isBlank(Configuration.X_API_KEY) || !Configuration.X_API_KEY.equals(StringUtils.replace(auth, "Bearer ", ""))) {
+      if (strict) {
+        routingContext.response().setStatusCode(403).end();
+      } else {
+        handler.handle(null);
+      }
+    } else {
+      handler.handle(auth);
+    }
   }
 
   private Router createActuators() {
@@ -100,7 +155,9 @@ public class WebServer extends AbstractVerticle {
       context.response().headers().add(CONTENT_TYPE, APPLICATION_JSON);
       context.next();
     });
-    router.route("/health").handler(healthHandler);
+    router.route("/health").handler(this::handleHealth);
+    router.route("/metrics").handler(this::handleMetrics);
+    router.route("/status").handler(this::handleStatus);
     return router;
   }
 
@@ -120,7 +177,7 @@ public class WebServer extends AbstractVerticle {
   private void handleGlobalFailure(RoutingContext routingContext) {
     var exception = routingContext.failure();
     log.error("", exception);
-    routingContext.response().setStatusCode(500).end("");
+    routingContext.response().setStatusCode(500).end();
   }
 
   private void handleRedirectToIndex(RoutingContext rc) {
@@ -131,10 +188,17 @@ public class WebServer extends AbstractVerticle {
     response.end();
   }
 
+  private void handleNotFound(RoutingContext rc) {
+    log.warn("Not found: {} from: {}", rc.request().remoteAddress(), rc.request().absoluteURI());
+    rc.response().setStatusCode(404).end();
+  }
+
   private void handleIndex(RoutingContext routingContext) {
+    //timerIndex.record(() ->{
     final JsonObject context = new JsonObject()
       .put("value", "foo");
     templateHandler.handle(routingContext, "index.html", context);
+    // });
   }
 
   private void handleHello(RoutingContext routingContext) {

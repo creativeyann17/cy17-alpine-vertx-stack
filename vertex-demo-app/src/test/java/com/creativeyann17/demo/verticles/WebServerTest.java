@@ -1,6 +1,7 @@
 package com.creativeyann17.demo.verticles;
 
-import com.creativeyann17.demo.App;
+import com.creativeyann17.demo.utils.SingletonsContext;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
@@ -20,14 +21,19 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(VertxExtension.class)
 class WebServerTest {
 
-  final HealthChecks healthChecks = App.putSingleton(HealthChecks.class, Mockito.mock(HealthChecks.class));
+  private final HealthChecks healthChecks = Mockito.mock(HealthChecks.class);
+  private final MeterRegistry meterRegistry = Mockito.mock(MeterRegistry.class);
 
   @BeforeEach
   void deploy(Vertx vertx, VertxTestContext testContext) {
+    SingletonsContext.put(HealthChecks.class, healthChecks);
+    SingletonsContext.put(MeterRegistry.class, meterRegistry);
+    when(meterRegistry.config()).thenReturn(Mockito.mock(MeterRegistry.Config.class));
     vertx.deployVerticle(new HelloConsumer());
     vertx.deployVerticle(new WebServer(), testContext.succeedingThenComplete());
   }
